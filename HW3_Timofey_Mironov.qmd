@@ -1,0 +1,188 @@
+---
+title: "Homework3_BioStat"
+author: "Timofey_Mironov"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+getwd()
+```
+
+```{r}
+# Читаем датасет
+pima <- readxl::read_excel('pima.xlsx')
+pima
+```
+
+# Задание № 1
+
+**Рассчитайте описательные статистики для переменных** `glucose`**,** `pressure`**,** `mass`
+
+```{r}
+# Проверим датасет на пропуски
+library(tidyverse)
+library(dplyr)
+sum(is.na(pima))
+
+# Считаем описательные статистики
+# glucose
+glucose_stats <- pima %>% 
+  summarise(
+    mean_glu = mean(glucose),
+    median_glu = median(glucose),
+    std_glu = sd(glucose),
+    min_glu = min(glucose),
+    max_glu = max(glucose),
+    first_quantile = quantile(glucose)[2],
+    third_quqantile = quantile(glucose)[4]
+  )
+```
+
+```{r}
+# pressure
+pressure_stats <- pima %>% 
+  summarise(
+    mean_pressure = mean(pressure),
+    median_pressure = median(pressure),
+    std_pressure = sd(pressure),
+    min_pressure = min(pressure),
+    max_pressure = max(pressure),
+    first_quantile = quantile(pressure)[2],
+    third_quqantile = quantile(pressure)[4]
+  )
+```
+
+```{r}
+# mass
+mass_stats <- pima %>% 
+  summarise(
+    mean_mass = mean(mass),
+    median_mass = median(mass),
+    std_mass = sd(mass),
+    min_mass = min(mass),
+    max_mass = max(mass),
+    first_quantile = quantile(mass)[2],
+    third_quqantile = quantile(mass)[4]
+  )
+
+glucose_stats
+pressure_stats
+mass_stats
+```
+
+# Задание № 2
+
+**Рассчитайте описательную статистику для переменной `diabetes`. Создайте на основе переменной `age` новую переменную `age_group`, которая будет отражать следующие возрастные группы: 21–35, 36–49 и 50+. Посчитайте описательную статистику для новой переменной.**
+
+```{r}
+# Считаем описательную статистику для diabetes
+absolute <- table(pima$diabetes) # Абсолютные частоты
+
+relative <- prop.table(absolute) # Относительные частоты)
+print("Абсолютные частоты:")
+absolute
+print("Относительные частоты:")
+relative * 100
+```
+
+```{r}
+# Проверяем, есть ли возраст < 21
+any(pima$age < 21)
+```
+
+```{r}
+# создаём новую переменную age_group
+
+pima <- pima %>% 
+  mutate(age_group = ifelse(
+    age <= 35, '21-35',
+    ifelse(age <= 49, '36-49', '50+')
+  ))
+
+# Считаем описательные статистики для age_group
+# Переменная категориальная -> Считаем абсолютные и относительные частоты
+absolute_age <- table(pima$age_group)
+relative_age <- absolute_age / length(pima$age_group) * 100
+
+absolute_age
+relative_age
+```
+
+# Задание № 3
+
+**Определите 90% доверительный интервал для переменной** `pedigree`**.**
+
+```{r}
+# Интервалы
+mean_interval <- mean(pima$pedigree)
+std_interval <- sd(pima$pedigree)
+se_interval <- std_interval / sqrt(length(pima$pedigree))
+
+# Уровень значимости альфа
+alpha <- 0.1
+df <- length(pima$pedigree) - 1
+T <- qt(alpha / 2, df, lower.tail = F)
+
+pedigree <- c(mean_interval - T * se_interval, 
+              mean_interval + T * se_interval)
+
+pedigree
+```
+
+# Задание № 4
+
+**Постройте график плотности вероятности для переменной** `glucose` **и отметьте на нем среднее значение. Для той же переменной постройте гистограмму. Постройте два ящика с усами для значений** `pos` **и** `neg` **соответственно переменной** `diabetes`**.**
+
+```{r}
+# График плотности вероятности для glucose со средним значением
+glucose_graphic <- ggplot(data = pima) + 
+  geom_density(aes(glucose)) + 
+  geom_vline(xintercept = mean(pima$glucose), color = 'purple') + 
+  labs(title = 'probability density plot')
+
+glucose_graphic
+```
+
+```{r}
+# Гистограмма
+hist_glucose <- hist(
+  pima$glucose,
+  breaks = 30,
+  main = 'Распределение переменной glucose',
+  xlab = 'glucose'
+)
+print(hist_glucose)
+```
+
+```{r}
+diabetes_boxplot <- ggplot(data = pima) +
+  geom_boxplot(aes(diabetes, glucose, fill = diabetes)) +
+  labs(title = 'Распределение признаков наличия диабета')
+print(diabetes_boxplot)
+```
+
+# Задание № 5
+
+**Постройте на одном графике две диаграммы рассеяния для наличия или отсутствия диабета. По оси X представьте значения обхвата трицепса, а по оси Y — массу тела. Выполните окрашивание, заливку и группирование по переменной** `diabetes`**.**
+
+```{r}
+# Создаём сабсет 
+# В сабсете triceps, mass != 0
+df_without_zero <- subset(pima, triceps != 0 & mass != 0)
+
+diabetes_scatterplot <- ggplot(data = df_without_zero,
+                           aes(x = triceps, y = mass)) + 
+  geom_point(color = 'black', shape = 21, size = 7,
+             aes(fill = df_without_zero$diabetes)) +
+  scale_fill_manual(values = c('green', 'purple')) + 
+  facet_grid(. ~ diabetes) +
+  labs(title = 'diabetes scatterplot',
+       x = 'triceps', y = 'mass') +
+  theme_linedraw()
+
+print(diabetes_scatterplot)
+
+```
